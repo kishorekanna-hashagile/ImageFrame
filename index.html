@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Frame with Cropper.js</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <style>
+        #crop-container {
+            display: none;
+            text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            height: 300px;
+            border: 1px solid #370404;
+            background-color: #f0f0f0;
+            z-index: 1000;
+        }
+
+        #cropped-img {
+            display: flex;
+            gap: 20px;
+            justify-content: start;
+            margin-top: 10px;
+        }
+
+        #cropped-img img {
+            width: 80px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        #frame-preview-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .frame-preview {
+            border: 2px solid transparent;
+            cursor: pointer;
+            width: 100px;
+            height: auto;
+            transition: border-color 0.3s;
+        }
+
+        .frame-preview:hover {
+            border-color: #007bff;
+        }
+
+        .frame-preview.selected {
+            border-color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload Profile Picture and Select a Frame</h1>
+
+    <form id="upload-form" method="POST" enctype="multipart/form-data">
+        <div id="profile-pic">
+            <label for="profile_pic">Choose your profile picture:</label>
+            <input type="file" id="profile_pic" name="profile_pic" accept="image/*" required><br><br>
+        </div>
+
+        <div id="crop-container">
+            <img id="image-to-crop" alt="Cropper Image">
+            <button type="button" id="crop-btn">Crop</button>
+        </div>
+
+        <div id="frame-preview-container">
+            <p>Available Frames</p>
+            <div id="frame-options" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                {% for frame in frames %}
+                <div class="frame-option" style="cursor: pointer; text-align: center;">
+                    <img src="{{ url_for('static', filename='frames/' + frame) }}" 
+                         alt="{{ frame }}" 
+                         data-frame="{{ frame }}" 
+                         class="frame-preview" 
+                         style="width: 100px; border: 2px solid transparent;">
+                    <p>{{ frame }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            <p id="selected-frame-message" style="margin-top: 10px; font-weight: bold;">No frame selected</p>
+            <input type="hidden" id="selected-frame-input" name="selected_frame" value="">
+        </div>
+        
+        <input type="hidden" id="selected_frame" name="selected_frame" required>
+
+        <div id="cropped-img"></div>
+        <button type="submit">Upload</button>
+    </form>
+
+    {% if result_image %}
+    <h2>Result Image</h2>
+    <img src="{{ url_for('static', filename = result_image) }}" alt="Result Image" style="max-width: 300px;"><br><br>
+    <a href="{{ url_for('download') }}">Download Result Image</a>
+    {% endif %}
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        const profilePicInput = document.getElementById('profile_pic');
+        const cropContainer = document.getElementById('crop-container');
+        const imageToCrop = document.getElementById('image-to-crop');
+        const cropBtn = document.getElementById('crop-btn');
+        const uploadForm = document.getElementById('upload-form');
+        const croppedIMG = document.getElementById('cropped-img');
+        const frameOptions = document.querySelectorAll('.frame-option img');
+        const framePreviewContainer = document.getElementById('frame-preview-container');
+        const selectedFrameMessage = document.getElementById('selected-frame-message');
+        const selectedFrameInput = document.getElementById('selected-frame-input');
+        let cropper;
+        let croppedFile;
+    
+        profilePicInput.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+    
+                reader.onload = function(e) {
+                    imageToCrop.src = e.target.result;
+                    cropContainer.style.display = 'block';
+    
+                    if (cropper) {
+                        cropper.destroy();
+                    }
+    
+                    cropper = new Cropper(imageToCrop, {
+                        aspectRatio: 1,
+                        viewMode: 1
+                    });
+                };
+    
+                reader.readAsDataURL(file);
+            } else {
+                console.error("No file selected for profile picture.");
+            }
+        });
+    
+        cropBtn.addEventListener('click', function() {
+            if (cropper) {
+                const canvas = cropper.getCroppedCanvas();
+                canvas.toBlob((blob) => {
+                    croppedFile = new File([blob], 'profile_pic.png', { type: 'image/png' });
+    
+                    const croppedImageElement = document.createElement('img');
+                    croppedImageElement.src = URL.createObjectURL(croppedFile);
+                    croppedImageElement.alt = 'Cropped Image';
+                    croppedIMG.innerHTML = ''; 
+                    croppedIMG.appendChild(croppedImageElement);
+    
+                    cropContainer.style.display = 'none';
+                }, 'image/png');
+            } else {
+                console.error("Cropper not initialized.");
+            }
+        });
+    
+        framePreviewContainer.addEventListener('click', function(event) {
+            const target = event.target;
+            if (target.classList.contains('frame-preview')) {
+                document.querySelectorAll('.frame-preview').forEach(el => el.classList.remove('selected'));
+                target.classList.add('selected');
+                selectedFrameInput.value = target.getAttribute('data-frame');
+                console.log("Selected frame:", target.getAttribute('data-frame'));
+            }
+        });
+    
+        frameOptions.forEach(frame => {
+            frame.addEventListener('click', function() {
+                frameOptions.forEach(f => f.style.border = '2px solid transparent');
+                
+                this.style.border = '2px solid #007BFF';
+    
+                const frameName = this.dataset.frame;
+                selectedFrameMessage.textContent = `Selected Frame: ${frameName}`;
+                
+                selectedFrameInput.value = frameName;
+    
+                console.log(`Frame selected: ${frameName}`);
+            });
+        });
+    
+        uploadForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+    
+            const formData = new FormData(uploadForm);
+            formData.append('profile_pic', croppedFile);
+    
+            console.log("Submitting form with data:");
+            for (const [key, value] of formData.entries()) {
+                console.log(`${key}:`, value);
+            }
+    
+            fetch('/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    console.error("Server responded with an error:", response.statusText);
+                    alert("Failed to upload. Check server logs.");
+                }
+                return response.text();
+            })
+            .then(data => {
+                document.body.innerHTML = data; 
+                console.log("Upload successful. Server response rendered.");
+            })
+            .catch(error => {
+                console.error("Error during submission:", error);
+                alert("An error occurred during upload.");
+            });
+        });
+    </script>
+    </body>
+</html>
