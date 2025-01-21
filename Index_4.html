@@ -188,62 +188,31 @@
             updateTransform();
         });
     
-        saveButton.addEventListener('click', () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const frame = document.getElementById('frame-overlay');
-            const image = imageAdjust;
-        
-            canvas.width = frame.width;
-            canvas.height = frame.height;
-        
-            const imageAspectRatio = image.naturalWidth / image.naturalHeight;
-            const frameAspectRatio = frame.width / frame.height;
-        
-            let imgWidth = frame.width;
-            let imgHeight = frame.height;
-        
-            if (imageAspectRatio > frameAspectRatio) {
-                imgHeight = frame.width / imageAspectRatio;
-                imgWidth = frame.width;
-            } else {
-                imgWidth = frame.height * imageAspectRatio;
-                imgHeight = frame.height;
+        saveButton.addEventListener('click', async () => {
+            const formData = new FormData();
+            formData.append('profile_pic', profilePicInput.files[0]);
+            formData.append('selected_frame', selectedFrameInput.value);
+            formData.append('scale', scale);
+            formData.append('rotation', rotation);
+            formData.append('posX', posX);
+            formData.append('posY', posY);
+    
+            try {
+                const response = await fetch('/', { method: 'POST', body: formData });
+                const data = await response.json();
+                if (response.ok) {
+                    croppedImgContainer.innerHTML = `
+                        <h2>Result:</h2>
+                        <img src="/${data.result_image}" alt="Result Image">
+                        <a href="/${data.result_image}" download="framed-image.jpg">Download Image</a>
+                    `;
+                } else {
+                    alert(data.error || 'Error saving the image.');
+                }
+            } catch (error) {
+                console.error('Error saving image:', error);
+                alert('Failed to save the image.');
             }
-        
-            const offsetX = (frame.width - imgWidth) / 2;
-            const offsetY = (frame.height - imgHeight) / 2;
-        
-            // Apply transformations to the canvas context (scale and rotate)
-            ctx.translate(canvas.width / 2, canvas.height / 2); // Center canvas
-            ctx.rotate((rotation * Math.PI) / 180); // Apply rotation
-            ctx.scale(scale, scale); // Apply zoom (scale)
-        
-            // Draw the image, adjusted for scale and position
-            ctx.drawImage(
-                image,
-                offsetX - canvas.width / 2 + posX / scale, 
-                offsetY - canvas.height / 2 + posY / scale, // Adjust Y for current position and scale
-                imgWidth,
-                imgHeight
-            );
-        
-            ctx.resetTransform();
-        
-            ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-        
-            const resultImage = new Image();
-            resultImage.src = canvas.toDataURL('image/png');
-            resultImage.onload = function() {
-                croppedImgContainer.innerHTML = ''; 
-                croppedImgContainer.appendChild(resultImage); 
-        
-                const downloadLink = document.createElement('a');
-                downloadLink.href = canvas.toDataURL('image/png');
-                downloadLink.download = 'framed-image.png';
-                downloadLink.textContent = 'Download Image';
-                croppedImgContainer.appendChild(downloadLink);
-            };
         });
     </script>
 </body>
