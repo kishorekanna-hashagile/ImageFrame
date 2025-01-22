@@ -32,10 +32,8 @@
             margin: 20px auto;
             border: 2px solid #ddd;
             overflow: hidden;
-            max-width: 100%;
-            height: auto;
         }
-        #frame-overlay, #image-adjust {
+        #frame-overlay {
             position: absolute;
             top: 0;
             left: 0;
@@ -43,21 +41,26 @@
             height: 100%;
             z-index: 2;
             pointer-events: none;
+        }
+        #image-adjust {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: move;
+            transform-origin: center;
             object-fit: contain;
+            z-index: 1;
         }
         #cropped-img img {
-            width: 100%;
-            max-width: 600px;
+            width: 600px;
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-<h1>Adjust Image with Frame Selection</h1>
-<div id="profile-pic">
-    <label for="profile_pic">Choose your profile picture:</label>
-    <input type="file" id="profile_pic" name="profile_pic" accept="image/*"><br><br>
-</div>
+<h1>Select the Frame</h1>
 <div id="frame-preview-container">
     <p>Available Frames</p>
     <div id="frame-options" style="display: flex; gap: 50px; flex-wrap: wrap;">
@@ -72,6 +75,10 @@
     </div>
     <p id="selected-frame-message" style="margin-top: 10px; font-weight: bold;">No frame selected</p>
     <input type="hidden" id="selected-frame-input" name="selected_frame" value="">
+</div>
+<div id="profile-pic">
+    <label for="profile_pic">Choose your profile picture:</label>
+    <input type="file" id="profile_pic" name="profile_pic" accept="image/*"><br><br>
 </div>
 <div id="adjust-container">
     <img id="image-adjust" src="" alt="Select image">
